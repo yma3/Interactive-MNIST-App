@@ -3,6 +3,7 @@ import tensorflow as tf
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.decomposition import PCA
 
 class DataAnalyzer():
     '''
@@ -35,6 +36,9 @@ class DataAnalyzer():
         self.TSNE_NSAMPLES = 200
         self.tsneX = self.X_train.flatten().reshape(self.X_train.shape[0],-1)
 
+        self.modelPCA = PCA(n_components=2)
+        self.X_pca = self.initPCA()
+        self.PCA_NSAMPLES = 200
 
     def getDNN(self, inputimage):
         return self.dnn.predict(np.expand_dims(inputimage, 0))[0]
@@ -50,8 +54,19 @@ class DataAnalyzer():
     def getKNN(self):
         return "knn prediction"
 
-    def getPCA(self):
-        return "PCA vectors"
+    def initPCA(self):
+        # print(self.tsneX.shape)
+        print("Starting PCA...")
+        X_r = self.modelPCA.fit(self.tsneX).transform(self.tsneX)
+        print("Finished PCA")
+        return X_r
+
+    def getPCA(self, inputimage):
+        # print(inputimage)
+        img = inputimage.flatten().reshape(1, -1)
+        # print(img.shape)
+        img_pca = self.modelPCA.transform(img)
+        return img_pca
 
     def getTSNE(self, image):
         # Flatten Image

@@ -10,7 +10,7 @@ X_train, X_test = X_train/255., X_test/255.
 print(X_train.shape, y_train.shape)
 print(X_test.shape, y_test.shape)
 # Hyperparameters
-EPOCHS = 10
+EPOCHS = 100
 LR = 1e-3
 
 # Define callback
@@ -25,14 +25,16 @@ callbacks = myCallback()
 # Train MNIST
 model = tf.keras.models.Sequential([
                                     tf.keras.layers.Flatten(input_shape=(28,28)),
+                                    tf.keras.layers.Dense(2048, activation='relu'),
                                     tf.keras.layers.Dense(1024, activation='relu'),
                                     tf.keras.layers.Dense(512, activation='relu'),
                                     tf.keras.layers.Dense(10, activation='softmax')
 ])
 
+model.summary()
 optim = tf.keras.optimizers.Adam(learning_rate=LR)
 model.compile(optimizer=optim, loss='sparse_categorical_crossentropy', metrics=['acc'])
-history = model.fit(X_train, y_train, epochs=EPOCHS, callbacks=[callbacks])
+history = model.fit(X_train, y_train, epochs=EPOCHS, validation_split=0.1)
 
-model.save('./mnist_dnn.h5')
+model.save('./models/overfit_mnist_dnn.h5')
 print("Model Saved!")

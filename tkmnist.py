@@ -52,6 +52,7 @@ class MainApp(tk.Frame):
         self.ButtonDelete = tk.Button(self.cbuttons_sub, text="Clear", command=self.deleteall)
         self.ButtonToggleTSNE = tk.Button(self.cbuttons_sub, text="Toggle TSNE", command=self.toggleTSNE)
         self.ButtonOpenCNN = tk.Button(self.cbuttons_sub, text='CNN Activations', command=self.openCNNwindow)
+        self.ButtonOpenPCA = tk.Button(self.cbuttons_sub, text='PCA Eigenfaces', command=self.openPCAwindow)
 
         self.toplevelcnnWindow = tk.Toplevel(self.parent)
         self.cnnImgPerRow = 8
@@ -70,6 +71,18 @@ class MainApp(tk.Frame):
         self.cnnwin_cnnwidg2.get_tk_widget().pack()
 
         self.toplevelcnnWindow.destroy()
+
+        self.toplevelpcaWindow = tk.Toplevel(self.parent)
+        self.pcawin_pcafig = plt.Figure()
+        self.pcawin_eigax = self.pcawin_pcafig.add_subplot(221)
+        self.pcawin_eigax2 = self.pcawin_pcafig.add_subplot(222)
+        self.pcawin_pcaax = self.pcawin_pcafig.add_subplot(223)
+        self.pcawin_pcaax2 = self.pcawin_pcafig.add_subplot(224)
+
+        self.pcawin_pcawidg = FigureCanvasTkAgg(self.pcawin_pcafig, self.toplevelpcaWindow)
+        self.pcawin_pcawidg.draw()
+        self.pcawin_pcawidg.get_tk_widget().pack()
+        self.toplevelpcaWindow.destroy()
 
         self.tsneValue = tk.StringVar()
         self.tsneValue.set("Run tSNE: " + str(self.runTSNE))
@@ -97,6 +110,8 @@ class MainApp(tk.Frame):
 
         # self.scattertsne = FigureCanvasTkAgg(self.vizfig, self.visualizeframe)
         # self.scatterpca = FigureCanvasTkAgg(self.vizfig, self.visualizeframe)
+        self.plotPCA()
+
 
         self.numpyfig = plt.Figure(figsize=(2.8,2.8), dpi=100)
         self.axnumpyimg = self.numpyfig.add_subplot(111)
@@ -108,6 +123,7 @@ class MainApp(tk.Frame):
         # Window Packs
         self.window.pack(side=tk.LEFT)
         self.cbuttons_sub.pack(side=tk.RIGHT)
+        self.ButtonOpenPCA.pack(side="bottom")
         self.ButtonOpenCNN.pack(side="bottom")
         self.labelTSNE.pack(side="bottom")
         self.ButtonToggleTSNE.pack(side="bottom", fill="both")
@@ -121,11 +137,19 @@ class MainApp(tk.Frame):
         # self.scatterpca.get_tk_widget().pack(side=tk.BOTTOM)
         # Keybinds
         self.window.bind("<B1-Motion>", self.paint)
+        self.window.bind("<B3-Motion>", self.erase)
 
 
     def paint(self, event):
         brushsize = 10
         python_green = '#FFFFFF'
+        x1, y1 = (event.x - brushsize), (event.y - brushsize)
+        x2, y2 = (event.x + brushsize), (event.y + brushsize)
+        self.window.create_oval(x1, y1, x2, y2, fill=python_green, outline="")
+
+    def erase(self, event):
+        brushsize = 20
+        python_green = '#000000'
         x1, y1 = (event.x - brushsize), (event.y - brushsize)
         x2, y2 = (event.x + brushsize), (event.y + brushsize)
         self.window.create_oval(x1, y1, x2, y2, fill=python_green, outline="")
@@ -157,12 +181,15 @@ class MainApp(tk.Frame):
         self.parent.update_idletasks()
 
     def updateallgraphs(self, event = None):
-        print("Updating!")
-        imgnp = self.imagegrabber()
+        # print("Updating!")
+        imgnp = self.imagegrabber()/255.
 
         # pred = [[0, 0, 0.1, 0.7, 0.05, 0.05, 0, 0,0,0]]
         pred_dnn = self.Analyzer.getDNN(imgnp)
         pred_cnn = self.Analyzer.getCNN(imgnp)
+        imgnp_pca = self.Analyzer.getPCA(imgnp)
+        imgnp_pca = imgnp_pca[0,:]
+        # print(imgnp_pca.shape)
         # print(pred_dnn)
 
         self.axnumpyimg.cla()
@@ -179,8 +206,11 @@ class MainApp(tk.Frame):
         self.axpca.set_title('PCA')
         self.axknn.set_title('KNN Prediction')
 
-        self.axdnn.bar(range(len(pred_dnn)), pred_dnn)
+        self.axdnn.bar(np.array(range(len(pred_dnn))), pred_dnn)
         self.axcnn.bar(range(len(pred_cnn)), pred_cnn)
+
+        self.axpca.scatter(imgnp_pca[0], imgnp_pca[1], s=75, color='black')
+        self.axpca.scatter(imgnp_pca[0], imgnp_pca[1], s=25, color="C"+str(np.argmax(pred_cnn)))
 
         loc = matplotlib.ticker.MultipleLocator(base=1.0)
         self.axdnn.xaxis.set_major_locator(loc)
@@ -207,6 +237,25 @@ class MainApp(tk.Frame):
             self.cnnwin_cnnax2.imshow(display_grid2, cmap=self.cmapcnn)
             self.cnnwin_cnnwidg.draw()
             self.cnnwin_cnnwidg2.draw()
+
+        if self.toplevelpcaWindow.winfo_exists():
+            self.pcawin_pcaax.cla()
+            self.pcawin_pcaax2.cla()
+
+            # self.pcawin_pcaax.set_title('Input Image Against First Principal Component',fontsize=12)
+            # self.pcawin_pcaax2.set_title('Input Image Against Second Principal Component',fontsize=12)
+            self.pcawin_pcaax.get_xaxis().set_visible(False)
+            self.pcawin_pcaax.get_yaxis().set_visible(False)
+            self.pcawin_pcaax2.get_xaxis().set_visible(False)
+            self.pcawin_pcaax2.get_yaxis().set_visible(False)
+
+            self.pcawin_pcaax.imshow(1-imgnp, alpha=1, cmap='gray')
+            self.pcawin_pcaax.imshow(self.Analyzer.modelPCA.components_[0].reshape(28,28), alpha=0.7, cmap='coolwarm')
+            self.pcawin_pcaax2.imshow(1-imgnp, alpha=1, cmap='gray')
+            self.pcawin_pcaax2.imshow(self.Analyzer.modelPCA.components_[1].reshape(28,28), alpha=0.7, cmap='coolwarm')
+
+            self.pcawin_pcawidg.draw()
+
 
         if self.runTSNE:
             self.axtsne.cla()
@@ -260,15 +309,46 @@ class MainApp(tk.Frame):
                 self.cnnwin_cnnwidg2.get_tk_widget().pack(fill="both")
 
 
-
-
-
-
-
         else:
             self.toplevelcnnWindow.destroy()
             # print("Closing CNN Window")
 
+    def plotPCA(self):
+        X, Y = self.Analyzer.X_pca[:self.Analyzer.PCA_NSAMPLES,:], self.Analyzer.y_train[:self.Analyzer.PCA_NSAMPLES]
+        pcadf = np.vstack((X.T, Y)).T
+        pcadf = pd.DataFrame(pcadf, columns=('Dim 1', 'Dim 2', 'label'))
+        for i, dff in pcadf.groupby("label"):
+            self.axpca.scatter(dff["Dim 1"], dff["Dim 2"], label=int(i))
+        self.axpca.legend()
+
+    def openPCAwindow(self):
+        if not self.toplevelpcaWindow.winfo_exists():
+            self.toplevelpcaWindow = tk.Toplevel(self.parent)
+            self.toplevelpcaWindow.title("PCA WINDOW")
+            x2 = self.parent.winfo_rootx()
+            y2 = self.parent.winfo_rooty()
+            self.toplevelpcaWindow.geometry("400x500+"+str(x2+self.parent.winfo_width()+10)+"+"+str(y2))
+            self.pcawin_pcawidg = FigureCanvasTkAgg(self.pcawin_pcafig, self.toplevelpcaWindow)
+
+            self.pcawin_eigax.imshow(self.Analyzer.modelPCA.components_[0].reshape(28,28), cmap='coolwarm')
+            self.pcawin_eigax2.imshow(self.Analyzer.modelPCA.components_[1].reshape(28,28), cmap='coolwarm')
+
+            self.pcawin_eigax.set_title("First Component", fontsize=10)
+            self.pcawin_eigax2.set_title("Second Component", fontsize=10)
+            self.pcawin_eigax.get_xaxis().set_visible(False)
+            self.pcawin_eigax.get_yaxis().set_visible(False)
+            self.pcawin_eigax2.get_xaxis().set_visible(False)
+            self.pcawin_eigax2.get_yaxis().set_visible(False)
+            self.pcawin_pcaax.get_xaxis().set_visible(False)
+            self.pcawin_pcaax.get_yaxis().set_visible(False)
+            self.pcawin_pcaax2.get_xaxis().set_visible(False)
+            self.pcawin_pcaax2.get_yaxis().set_visible(False)
+
+            self.pcawin_pcawidg.draw()
+            self.pcawin_pcawidg.get_tk_widget().pack(fill="both")
+
+        else:
+            self.toplevelpcaWindow.destroy()
 
 def main():
     root = tk.Tk()
