@@ -189,8 +189,12 @@ class MainApp(tk.Frame):
         pred_cnn = self.Analyzer.getCNN(imgnp)
         imgnp_pca = self.Analyzer.getPCA(imgnp)
         imgnp_pca = imgnp_pca[0,:]
+        pred_knn = self.Analyzer.getKNN(imgnp)
+        graph_knn = [0]*10
+        graph_knn[pred_knn[0]] = 1
         # print(imgnp_pca.shape)
-        # print(pred_dnn)
+
+        # print(graph_knn)
 
         self.axnumpyimg.cla()
         self.axnumpyimg.set_title('Downsampled Image')
@@ -199,6 +203,7 @@ class MainApp(tk.Frame):
 
         self.axdnn.cla()
         self.axcnn.cla()
+        self.axknn.cla()
 
         self.axdnn.set_title('ANN Prediction')
         self.axcnn.set_title('CNN Prediction')
@@ -208,6 +213,7 @@ class MainApp(tk.Frame):
 
         self.axdnn.bar(np.array(range(len(pred_dnn))), pred_dnn)
         self.axcnn.bar(range(len(pred_cnn)), pred_cnn)
+        self.axknn.bar(range(len(graph_knn)), graph_knn)
 
         self.axpca.scatter(imgnp_pca[0], imgnp_pca[1], s=75, color='black')
         self.axpca.scatter(imgnp_pca[0], imgnp_pca[1], s=25, color="C"+str(np.argmax(pred_cnn)))
@@ -217,6 +223,7 @@ class MainApp(tk.Frame):
         self.axdnn.set_ylim([0,1])
         self.axcnn.xaxis.set_major_locator(loc)
         self.axcnn.set_ylim([0,1])
+
         self.bardnn.draw()
 
         if self.toplevelcnnWindow.winfo_exists():

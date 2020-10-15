@@ -4,6 +4,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.decomposition import PCA
+import pickle
 
 class DataAnalyzer():
     '''
@@ -31,6 +32,8 @@ class DataAnalyzer():
         self.cnn_interpred0 = None
         self.cnn_interpred1 = None
 
+        self.knn = pickle.load(open("./models/mnist_knn.pkl", 'rb'))
+
         self.modelTSNE = TSNE(n_components=2, random_state=0, verbose=1)
         self.tsnedf = None
         self.TSNE_NSAMPLES = 200
@@ -51,8 +54,9 @@ class DataAnalyzer():
         self.cnn_interpred1 = self.cnn_layer1.predict(img)
         return self.cnn.predict(img)[0]
 
-    def getKNN(self):
-        return "knn prediction"
+    def getKNN(self, inputimage):
+        img = inputimage.flatten().reshape(1, -1)
+        return self.knn.predict(img)
 
     def initPCA(self):
         # print(self.tsneX.shape)
